@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from filterMne import get_events_and_labels
+from mne_manager import get_events_and_labels
 
 def create_dataset(raws, subjects, task_name, tmin=0, tmax=4):
     from mne import Epochs

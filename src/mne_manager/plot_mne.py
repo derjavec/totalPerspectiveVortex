@@ -1,6 +1,9 @@
 import mne
 import matplotlib.pyplot as plt
 import numpy as np
+import logging
+
+logger = logging.getLogger(__name__)
 
 def visualize_group_raw(raws, title="EEG signals", filename=None, n_channels=10, duration=10):
     all_data = []
@@ -21,5 +24,5 @@ def visualize_group_raw(raws, title="EEG signals", filename=None, n_channels=10,
     plt.legend(loc="upper right")
     if filename:
         plt.savefig(filename)
-        print(f"Plot saved to {filename}")
+        logger.info(f"Plot saved to {filename}")
     plt.close()

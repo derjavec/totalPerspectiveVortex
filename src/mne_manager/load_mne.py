@@ -4,7 +4,7 @@ from mne.datasets import eegbci
 from mne.io import read_raw_edf
 import numpy as np
 import pandas as pd
-from plotMne import visualize_group_raw
+from .plot_mne import visualize_group_raw
 
 
 def load_raw_eeg(subject, runs):

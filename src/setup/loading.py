@@ -1,0 +1,27 @@
+import os
+import logging
+from mne_manager import load_raw_eeg, filter_raw
+
+logger = logging.getLogger(__name__)
+
+def prepare_directories(base_dir: str) -> tuple[str, str]:
+    dataset_dir = os.path.join(base_dir, "dataset")
+    plots_dir = os.path.join(base_dir, "plots")
+
+    os.makedirs(dataset_dir, exist_ok=True)
+    os.makedirs(plots_dir, exist_ok=True)
+
+    logger.debug("Directories prepared: %s, %s", dataset_dir, plots_dir)
+    return dataset_dir, plots_dir
+
+
+def load_subjects_raw(subjects, runs):
+    logger.info("Loading raw EEG data")
+    raws = [load_raw_eeg(subject, runs) for subject in subjects]
+    logger.debug("Loaded %d raw recordings", len(raws))
+    return raws
+
+
+def apply_filter(raws):
+    logger.info("Applying bandpass filter 7–30 Hz")
+    return [filter_raw(raw) for raw in raws]
