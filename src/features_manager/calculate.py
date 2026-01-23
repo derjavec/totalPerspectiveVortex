@@ -3,8 +3,8 @@ import pandas as pd
 from mne.time_frequency import psd_array_welch
 
 BANDS = {
-    "delta": (1, 4),
-    "theta": (4, 8),
+    # "delta": (1, 4),
+    # "theta": (4, 8),
     "alpha": (8, 13),
     "beta": (13, 30),
 }
@@ -15,9 +15,9 @@ def compute_features_from_row(row, sfreq):
     eeg_cols = [c for c in row.index if "_t" in c]
 
     # extraemos canales y tiempos explícitamente
-    channels = sorted({c.split("_t")[0] for c in eeg_cols})
+    channels_all = sorted({c.split("_t")[0] for c in eeg_cols})
     times = sorted({int(c.split("_t")[1]) for c in eeg_cols})
-
+    channels = [ch for ch in channels_all if ch in ["C3", "C4", "Cz"]]
     ch_index = {ch: i for i, ch in enumerate(channels)}
     t_index = {t: i for i, t in enumerate(times)}
 
@@ -29,7 +29,9 @@ def compute_features_from_row(row, sfreq):
 
     for col in eeg_cols:
         ch, t = col.split("_t")
-        data[ch_index[ch], t_index[int(t)]] = row[col]
+        t = int(t)
+        if ch in channels:
+            data[ch_index[ch], t_index[t]] = row[col]
 
     # PSD
     psd, freqs = psd_array_welch(

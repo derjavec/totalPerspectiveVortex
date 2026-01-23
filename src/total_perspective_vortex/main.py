@@ -1,7 +1,7 @@
 import logging
 
 from setup import setup_logging, prepare_directories, load_subjects_raw, apply_filter
-from total_perspective_vortex.core import select_task, visualize_raws, build_and_save_dataset
+from total_perspective_vortex.core import select_task, visualize_raws, build_and_save_dataset, save_features_dataset
 from features_manager import extract_features_from_raw_dataset
 
 logger = logging.getLogger(__name__)
@@ -26,14 +26,14 @@ def main():
     raws_filtered = apply_filter(raws)
 
     visualize_raws(raws_filtered, plots_dir, task_name, stage="After")
-    df = build_and_save_dataset(
+    df_raw = build_and_save_dataset(
         raws_filtered,
         subjects,
         task_name,
         dataset_dir,
     )
-    extract_features_from_raw_dataset(df)
-
+    df_features = extract_features_from_raw_dataset(df_raw)
+    save_features_dataset(df_features, task_name, dataset_dir)
 
 if __name__ == "__main__":
     main()
