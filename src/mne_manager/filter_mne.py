@@ -1,7 +1,7 @@
-import mne
-
 def filter_raw(raw, l_freq=7., h_freq=30.):
+    import mne
     raw_filtered = raw.copy()
+    raw_filtered.notch_filter(freqs=50, verbose=False)
     raw_filtered.filter(l_freq, h_freq, fir_design='firwin', verbose=False)
     return raw_filtered
 
@@ -12,6 +12,7 @@ def get_events_and_labels(raw, keep_labels=None):
     - If there are 2 labels in keep_labels: first → 0, second → 1
     - If there are 3 labels: first → 0, second & third → 1
     """
+    import mne
     events, event_id = mne.events_from_annotations(raw)
     if keep_labels is None:
         keep_labels = list(event_id.keys())

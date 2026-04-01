@@ -4,10 +4,11 @@ from mne.time_frequency import psd_array_welch
 
 # Configuración global
 EEG_CONFIG = {
-    "channels": ["C3", "C4", "Cz"],
+    "channels": ["C1", "C2", "C3", "C4", "Cz"],
     "bands": {
-        "alpha": (8, 13),
-        "beta": (13, 30),
+        "mu": (8, 12),
+        "beta_low": (13, 20),
+        "beta_high": (20, 30),
     }
 }
 
@@ -49,6 +50,12 @@ def compute_features_from_row(row, sfreq):
         for ch_idx, power in enumerate(band_power):
             features[f"{channels[ch_idx]}_{band_name}_power"] = np.log(power + 1e-10)
             features[f"{channels[ch_idx]}_{band_name}_rel"] = power / (total_power[ch_idx] + 1e-10)
+            band_data = data[ch_idx, :]
+            features[f"{channels[ch_idx]}_{band_name}_mean"] = band_data.mean()
+            features[f"{channels[ch_idx]}_{band_name}_std"] = band_data.std()
+            features[f"{channels[ch_idx]}_{band_name}_max"] = band_data.max()
+            features[f"{channels[ch_idx]}_{band_name}_min"] = band_data.min()
+            features[f"{channels[ch_idx]}_{band_name}_range"] = band_data.max() - band_data.min()
 
     return features
 
@@ -69,6 +76,7 @@ def extract_features_from_raw_dataset(df_raw, sfreq=160):
 def calculate_differences_and_ratios(df):
     channels = EEG_CONFIG["channels"]
     bands = list(EEG_CONFIG["bands"].keys())
+    stats = ["mean", "std", "max", "min", "range"]
 
     for band in bands:
         # diferencias de power
@@ -90,5 +98,13 @@ def calculate_differences_and_ratios(df):
         df[f"{channels[0]}_{channels[1]}_{band}_ratio_power"] = df[f"{channels[0]}_{band}_power"] - df[f"{channels[1]}_{band}_power"]
         df[f"{channels[0]}_{channels[2]}_{band}_ratio_power"] = df[f"{channels[0]}_{band}_power"] - df[f"{channels[2]}_{band}_power"]
         df[f"{channels[1]}_{channels[2]}_{band}_ratio_power"] = df[f"{channels[1]}_{band}_power"] - df[f"{channels[2]}_{band}_power"]
+        for stat in stats:
+            df[f"{channels[0]}_{channels[1]}_{band}_diff_{stat}"] = df[f"{channels[0]}_{band}_{stat}"] - df[f"{channels[1]}_{band}_{stat}"]
+            df[f"{channels[0]}_{channels[2]}_{band}_diff_{stat}"] = df[f"{channels[0]}_{band}_{stat}"] - df[f"{channels[2]}_{band}_{stat}"]
+            df[f"{channels[1]}_{channels[2]}_{band}_diff_{stat}"] = df[f"{channels[1]}_{band}_{stat}"] - df[f"{channels[2]}_{band}_{stat}"]
+
+            df[f"{channels[0]}_{channels[1]}_{band}_ratio_{stat}"] = df[f"{channels[0]}_{band}_{stat}"] / (df[f"{channels[1]}_{band}_{stat}"] + 1e-10)
+            df[f"{channels[0]}_{channels[2]}_{band}_ratio_{stat}"] = df[f"{channels[0]}_{band}_{stat}"] / (df[f"{channels[2]}_{band}_{stat}"] + 1e-10)
+            df[f"{channels[1]}_{channels[2]}_{band}_ratio_{stat}"] = df[f"{channels[1]}_{band}_{stat}"] / (df[f"{channels[2]}_{band}_{stat}"] + 1e-10)
 
     return df

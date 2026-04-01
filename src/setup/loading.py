@@ -17,8 +17,29 @@ def prepare_directories(base_dir: str) -> tuple[str, str]:
 
 def load_subjects_raw(subjects, runs):
     logger.info("Loading raw EEG data")
-    raws = [load_raw_eeg(subject, runs) for subject in subjects]
-    logger.debug("Loaded %d raw recordings", len(raws))
+
+    raws = []
+    failed = []
+
+    for subject in subjects:
+        try:
+            raw = load_raw_eeg(subject, runs)
+            if raw is not None:
+                raws.append(raw)
+                logger.debug("Loaded subject %s", subject)
+            else:
+                logger.debug("Empty raw for subject %s", subject)
+                failed.append(subject)
+
+        except Exception as e:
+            logger.debug("Failed subject %s | error: %s", subject, str(e))
+            failed.append(subject)
+
+    logger.info("Loaded %d raw recordings", len(raws))
+
+    if failed:
+        logger.warning("Skipped %d subjects: %s", len(failed), failed)
+
     return raws
 
 
