@@ -8,6 +8,7 @@ def setup_logging(
     log_dir: str = "logs",
     log_file: str = "tpv.log",
 ) -> None:
+    """Configure console and file logging for the app."""
     Path(log_dir).mkdir(exist_ok=True)
 
     formatter = logging.Formatter(

@@ -1,6 +1,7 @@
 import argparse
 
 def parse_args():
+    """Parse command-line arguments for the CLI."""
     parser = argparse.ArgumentParser(description='Total Perspective Vortex')
     
     parser.add_argument('--level', type=str, default='INFO', choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"], help='set logging level')

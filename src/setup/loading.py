@@ -5,6 +5,7 @@ from mne_manager import load_raw_eeg, filter_raw
 logger = logging.getLogger(__name__)
 
 def prepare_directories(base_dir: str) -> tuple[str, str]:
+    """Ensure dataset and plot directories exist."""
     dataset_dir = os.path.join(base_dir, "dataset")
     plots_dir = os.path.join(base_dir, "plots")
 
@@ -16,6 +17,7 @@ def prepare_directories(base_dir: str) -> tuple[str, str]:
 
 
 def load_subjects_raw(subjects, runs):
+    """Load raw EEG recordings for each subject."""
     logger.info("Loading raw EEG data")
 
     raws = []
@@ -44,5 +46,6 @@ def load_subjects_raw(subjects, runs):
 
 
 def apply_filter(raws):
+    """Bandpass-filter all raw recordings."""
     logger.info("Applying bandpass filter 7–30 Hz")
     return [filter_raw(raw) for raw in raws]

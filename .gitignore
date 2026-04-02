@@ -212,3 +212,6 @@ generated_files
 logs
 *.egg-info
 venv
+.DS_Store
+.python-version
+assets/dataset/

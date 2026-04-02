@@ -1,10 +1,7 @@
 import numpy as np
 
 def select_task():
-    """
-    Allow the user to choose the type of motor imagery task for EEG analysis.
-    The chosen task will determine which experimental runs are loaded and processed.
-    """
+    """Prompt the user to choose an EEG task and its runs."""
     TASK_RUNS = {
         "hands_vs_feet": [6, 10, 14],
         "left_vs_right": [4, 8, 12],

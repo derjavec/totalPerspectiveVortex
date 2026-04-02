@@ -2,6 +2,7 @@ import numpy as np
 from mne_manager import get_events_and_labels
 
 def get_labels(task_name):
+    """Return task-specific annotation labels to keep."""
 
     if task_name in ['hands_vs_feet', 'left_vs_right']:
         keep_labels = ['T1', 'T2']
@@ -13,6 +14,7 @@ def get_labels(task_name):
 
 
 def create_dataset(raws, subjects, task_name, tmin=0, tmax=4):
+    """Build a tabular dataset from epoched EEG signals."""
     import pandas as pd
     from mne import Epochs
     
@@ -42,28 +44,9 @@ def create_dataset(raws, subjects, task_name, tmin=0, tmax=4):
     df = pd.DataFrame(rows)
     return df
 
-def cov_epoch(X):
-    return X @ X.T / X.shape[1]
 
-
-def _mean_covariance(X_epochs):
-    covs = [cov_epoch(X) for X in X_epochs]
-    return np.mean(covs, axis=0)
-
-
-def _inv_sqrtm(C):
-    eigvals, eigvecs = np.linalg.eigh(C)
-    eigvals[eigvals < 1e-12] = 1e-12
-    return eigvecs @ np.diag(1.0 / np.sqrt(eigvals)) @ eigvecs.T
-
-
-def euclidean_alignment(X_epochs):
-    C = _mean_covariance(X_epochs)
-    W = _inv_sqrtm(C)
-    return np.array([W @ X for X in X_epochs])
-
-
-def prepare_data_for_csp(raws, subjects, task_name, tmin=0, tmax=4, align=True):
+def prepare_data_for_csp(raws, subjects, task_name, tmin=0, tmax=4):
+    """Return epoch tensors and labels for CSP-based pipelines."""
     from mne import Epochs
     keep_labels = get_labels(task_name)
 
@@ -75,8 +58,6 @@ def prepare_data_for_csp(raws, subjects, task_name, tmin=0, tmax=4, align=True):
         epochs = Epochs(raw, events, event_id=keep_events, tmin=tmin, tmax=tmax,
                         baseline=None, preload=True, verbose=False)
         X = epochs.get_data()
-        if align:
-            X = euclidean_alignment(X)
         y_raw = epochs.events[:, -1]
         y = np.array([mapping[val] for val in y_raw])
         X_list.append(X)

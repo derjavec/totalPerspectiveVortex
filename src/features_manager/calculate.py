@@ -13,6 +13,7 @@ EEG_CONFIG = {
 }
 
 def compute_features_from_row(row, sfreq):
+    """Compute band-power features and simple statistics for one epoch row."""
     eeg_cols = [c for c in row.index if "_t" in c]
 
     channels_all = sorted({c.split("_t")[0] for c in eeg_cols})
@@ -61,6 +62,7 @@ def compute_features_from_row(row, sfreq):
 
 
 def extract_features_from_raw_dataset(df_raw, sfreq=160):
+    """Transform raw epoch samples into a tabular feature set."""
     feature_rows = []
 
     for _, row in df_raw.iterrows():
@@ -74,6 +76,7 @@ def extract_features_from_raw_dataset(df_raw, sfreq=160):
 
 
 def calculate_differences_and_ratios(df):
+    """Add pairwise differences and ratios between channels and bands."""
     channels = EEG_CONFIG["channels"]
     bands = list(EEG_CONFIG["bands"].keys())
     stats = ["mean", "std", "max", "min", "range"]
@@ -107,4 +110,5 @@ def calculate_differences_and_ratios(df):
             df[f"{channels[0]}_{channels[2]}_{band}_ratio_{stat}"] = df[f"{channels[0]}_{band}_{stat}"] / (df[f"{channels[2]}_{band}_{stat}"] + 1e-10)
             df[f"{channels[1]}_{channels[2]}_{band}_ratio_{stat}"] = df[f"{channels[1]}_{band}_{stat}"] / (df[f"{channels[2]}_{band}_{stat}"] + 1e-10)
 
-    return df
+    # De-fragment the DataFrame to avoid PerformanceWarning.
+    return df.copy()

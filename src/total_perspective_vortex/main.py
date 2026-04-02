@@ -7,6 +7,7 @@ from features_manager import extract_features_from_raw_dataset, calculate_differ
 logger = logging.getLogger(__name__)
 
 def main():
+    """Run the full pipeline from data loading to training."""
     args = parse_args()
     setup_logging(level=args.level)
     if args.subject is not None:
@@ -24,6 +25,9 @@ def main():
     logger.info("Selected task: %s | runs: %s", task_name, runs)
 
     raws = load_subjects_raw(subjects, runs)
+    if not raws:
+        logger.error("No se pudo cargar ningún registro EEG. Verifica acceso a los datos de PhysioNet.")
+        return
     visualize_raws(raws, plots_dir, task_name, stage="Before")
 
     raws_filtered = apply_filter(raws)
