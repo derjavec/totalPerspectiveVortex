@@ -1,18 +1,36 @@
 import argparse
 
+
 def parse_args():
     """Parse command-line arguments for the CLI."""
-    parser = argparse.ArgumentParser(description='Total Perspective Vortex')
-    
-    parser.add_argument('--level', type=str, default='INFO', choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"], help='set logging level')
-    parser.add_argument('--subject', type=int, default=None, help='ID of the subject to analyze (default: all subjects)')
+    parser = argparse.ArgumentParser(description="Total Perspective Vortex")
+
     parser.add_argument(
-        "--model", 
-        type=str, 
-        default="logistic", 
-        choices=["logistic", "randomforest"],
-        help="Choose classifier"
+        "--level",
+        type=str,
+        default="INFO",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        help="Set the logging level.",
     )
-    parser.add_argument('--transformer', type=str, default=None, choices=['pca', 'csp'], help='transformer choice (pca or csp)')
-    
+    parser.add_argument(
+        "--subject",
+        type=int,
+        default=None,
+        help="ID of the subject to analyze (default: all subjects).",
+    )
+    parser.add_argument(
+        "--model",
+        type=str,
+        default="logistic",
+        choices=["logistic", "randomforest"],
+        help="Choose the classifier.",
+    )
+    parser.add_argument(
+        "--transformer",
+        type=str,
+        default="none",
+        choices=["none", "pca", "csp"],
+        help="Transformer choice (none, pca or csp).",
+    )
+
     return parser.parse_args()
