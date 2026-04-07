@@ -4,6 +4,7 @@ from mne_manager import load_raw_eeg, filter_raw
 
 logger = logging.getLogger(__name__)
 
+
 def prepare_directories(base_dir: str) -> tuple[str, str]:
     """Ensure dataset and plot directories exist."""
     dataset_dir = os.path.join(base_dir, "dataset")
