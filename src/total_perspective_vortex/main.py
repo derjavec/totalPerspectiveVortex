@@ -1,7 +1,7 @@
 import logging
 
 from setup import parse_args, setup_logging
-from total_perspective_vortex.pipeline import run_pipeline
+from total_perspective_vortex.core import run_pipeline
 
 logger = logging.getLogger(__name__)
 

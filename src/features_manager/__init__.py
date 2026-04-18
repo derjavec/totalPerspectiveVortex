@@ -1,9 +1,8 @@
-from .calculate import (
-    calculate_differences_and_ratios,
-    extract_features_from_prepared_data,
-)
-
+from .calculate import calculate_differences_and_ratios
+from .extract import extract_features_from_prepared_data
+from .anova import select_best_features_anova
 __all__ = [
     "calculate_differences_and_ratios",
     "extract_features_from_prepared_data",
+    "select_best_features_anova"
 ]

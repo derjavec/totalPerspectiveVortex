@@ -1,8 +1,8 @@
 import numpy as np
 import pandas as pd
+from mne.filter import filter_data
 from mne.time_frequency import psd_array_welch
 
-# Global configuration for feature extraction.
 EEG_CONFIG = {
     "channels": ["C1", "C2", "C3", "C4", "Cz"],
     "bands": {
@@ -14,7 +14,7 @@ EEG_CONFIG = {
 
 
 def compute_features_from_epoch(data, channels, sfreq):
-    """Compute band-power features and simple statistics for one epoch."""
+    """Compute band-power and band-filtered time-domain features for one epoch."""
     psd, freqs = psd_array_welch(
         data,
         sfreq=sfreq,
@@ -31,56 +31,31 @@ def compute_features_from_epoch(data, channels, sfreq):
         idx = (freqs >= fmin) & (freqs <= fmax)
         band_power = psd[:, idx].sum(axis=1)
 
+        band_filtered = filter_data(
+            data,
+            sfreq=sfreq,
+            l_freq=fmin,
+            h_freq=fmax,
+            verbose=False,
+        )
+
         for ch_idx, power in enumerate(band_power):
-            power_key = f"{channels[ch_idx]}_{band_name}_power"
-            features[power_key] = np.log(power + 1e-10)
-            features[f"{channels[ch_idx]}_{band_name}_rel"] = (
+            ch_name = channels[ch_idx]
+            band_signal = band_filtered[ch_idx, :]
+
+            features[f"{ch_name}_{band_name}_power"] = np.log(power + 1e-10)
+            features[f"{ch_name}_{band_name}_rel"] = (
                 power / (total_power[ch_idx] + 1e-10)
             )
-            band_data = data[ch_idx, :]
-            features[f"{channels[ch_idx]}_{band_name}_mean"] = band_data.mean()
-            features[f"{channels[ch_idx]}_{band_name}_std"] = band_data.std()
-            features[f"{channels[ch_idx]}_{band_name}_max"] = band_data.max()
-            features[f"{channels[ch_idx]}_{band_name}_min"] = band_data.min()
-            features[f"{channels[ch_idx]}_{band_name}_range"] = (
-                band_data.max() - band_data.min()
+            features[f"{ch_name}_{band_name}_mean"] = band_signal.mean()
+            features[f"{ch_name}_{band_name}_std"] = band_signal.std()
+            features[f"{ch_name}_{band_name}_max"] = band_signal.max()
+            features[f"{ch_name}_{band_name}_min"] = band_signal.min()
+            features[f"{ch_name}_{band_name}_range"] = (
+                band_signal.max() - band_signal.min()
             )
 
     return features
-
-
-def extract_features_from_prepared_data(prepared_data, sfreq=160):
-    """Transform prepared epoch tensors into a tabular feature set."""
-    X = prepared_data["X"]
-    y = prepared_data["y"]
-    subject_vec = prepared_data["subject_vec"]
-    epoch_ids = prepared_data["epoch_ids"]
-    channels = [
-        ch for ch in prepared_data["ch_names"] if ch in EEG_CONFIG["channels"]
-    ]
-
-    if not channels:
-        return pd.DataFrame(
-            columns=[
-                "subject",
-                "label",
-                "epoch_id",
-            ]
-        )
-
-    channel_indices = [prepared_data["ch_names"].index(ch) for ch in channels]
-    feature_rows = []
-
-    for epoch, subject, label, epoch_id in zip(X, subject_vec, y, epoch_ids):
-        features = compute_features_from_epoch(
-            epoch[channel_indices, :], channels, sfreq
-        )
-        features["subject"] = int(subject)
-        features["label"] = int(label)
-        features["epoch_id"] = int(epoch_id)
-        feature_rows.append(features)
-
-    return pd.DataFrame(feature_rows)
 
 
 def calculate_differences_and_ratios(df):
@@ -88,86 +63,68 @@ def calculate_differences_and_ratios(df):
     channels = EEG_CONFIG["channels"]
     bands = list(EEG_CONFIG["bands"].keys())
     stats = ["mean", "std", "max", "min", "range"]
+    eps = 1e-10
+
+    new_cols = {}
 
     for band in bands:
-        # Power differences.
-        df[f"{channels[0]}_{channels[1]}_{band}_diff_power"] = (
-            df[f"{channels[0]}_{band}_power"]
-            - df[f"{channels[1]}_{band}_power"]
+        # Power differences
+        new_cols[f"{channels[0]}_{channels[1]}_{band}_diff_power"] = (
+            df[f"{channels[0]}_{band}_power"] - df[f"{channels[1]}_{band}_power"]
         )
-        df[f"{channels[0]}_{channels[2]}_{band}_diff_power"] = (
-            df[f"{channels[0]}_{band}_power"]
-            - df[f"{channels[2]}_{band}_power"]
+        new_cols[f"{channels[0]}_{channels[2]}_{band}_diff_power"] = (
+            df[f"{channels[0]}_{band}_power"] - df[f"{channels[2]}_{band}_power"]
         )
-        df[f"{channels[1]}_{channels[2]}_{band}_diff_power"] = (
-            df[f"{channels[1]}_{band}_power"]
-            - df[f"{channels[2]}_{band}_power"]
+        new_cols[f"{channels[1]}_{channels[2]}_{band}_diff_power"] = (
+            df[f"{channels[1]}_{band}_power"] - df[f"{channels[2]}_{band}_power"]
         )
 
-        # Relative-power differences.
-        df[f"{channels[0]}_{channels[1]}_{band}_diff_rel"] = (
+        # Relative-power differences
+        new_cols[f"{channels[0]}_{channels[1]}_{band}_diff_rel"] = (
             df[f"{channels[0]}_{band}_rel"] - df[f"{channels[1]}_{band}_rel"]
         )
-        df[f"{channels[0]}_{channels[2]}_{band}_diff_rel"] = (
+        new_cols[f"{channels[0]}_{channels[2]}_{band}_diff_rel"] = (
             df[f"{channels[0]}_{band}_rel"] - df[f"{channels[2]}_{band}_rel"]
         )
-        df[f"{channels[1]}_{channels[2]}_{band}_diff_rel"] = (
+        new_cols[f"{channels[1]}_{channels[2]}_{band}_diff_rel"] = (
             df[f"{channels[1]}_{band}_rel"] - df[f"{channels[2]}_{band}_rel"]
         )
 
-        # Relative-power ratios.
-        df[f"{channels[0]}_{channels[1]}_{band}_ratio_rel"] = (
-            df[f"{channels[0]}_{band}_rel"]
-            / (df[f"{channels[1]}_{band}_rel"] + 1e-10)
+        # Relative-power ratios
+        new_cols[f"{channels[0]}_{channels[1]}_{band}_ratio_rel"] = (
+            df[f"{channels[0]}_{band}_rel"] / (df[f"{channels[1]}_{band}_rel"] + eps)
         )
-        df[f"{channels[0]}_{channels[2]}_{band}_ratio_rel"] = (
-            df[f"{channels[0]}_{band}_rel"]
-            / (df[f"{channels[2]}_{band}_rel"] + 1e-10)
+        new_cols[f"{channels[0]}_{channels[2]}_{band}_ratio_rel"] = (
+            df[f"{channels[0]}_{band}_rel"] / (df[f"{channels[2]}_{band}_rel"] + eps)
         )
-        df[f"{channels[1]}_{channels[2]}_{band}_ratio_rel"] = (
-            df[f"{channels[1]}_{band}_rel"]
-            / (df[f"{channels[2]}_{band}_rel"] + 1e-10)
+        new_cols[f"{channels[1]}_{channels[2]}_{band}_ratio_rel"] = (
+            df[f"{channels[1]}_{band}_rel"] / (df[f"{channels[2]}_{band}_rel"] + eps)
         )
 
-        # Log-power ratios are represented as differences.
-        df[f"{channels[0]}_{channels[1]}_{band}_ratio_power"] = (
-            df[f"{channels[0]}_{band}_power"]
-            - df[f"{channels[1]}_{band}_power"]
-        )
-        df[f"{channels[0]}_{channels[2]}_{band}_ratio_power"] = (
-            df[f"{channels[0]}_{band}_power"]
-            - df[f"{channels[2]}_{band}_power"]
-        )
-        df[f"{channels[1]}_{channels[2]}_{band}_ratio_power"] = (
-            df[f"{channels[1]}_{band}_power"]
-            - df[f"{channels[2]}_{band}_power"]
-        )
+
         for stat in stats:
-            df[f"{channels[0]}_{channels[1]}_{band}_diff_{stat}"] = (
-                df[f"{channels[0]}_{band}_{stat}"]
-                - df[f"{channels[1]}_{band}_{stat}"]
+            new_cols[f"{channels[0]}_{channels[1]}_{band}_diff_{stat}"] = (
+                df[f"{channels[0]}_{band}_{stat}"] - df[f"{channels[1]}_{band}_{stat}"]
             )
-            df[f"{channels[0]}_{channels[2]}_{band}_diff_{stat}"] = (
-                df[f"{channels[0]}_{band}_{stat}"]
-                - df[f"{channels[2]}_{band}_{stat}"]
+            new_cols[f"{channels[0]}_{channels[2]}_{band}_diff_{stat}"] = (
+                df[f"{channels[0]}_{band}_{stat}"] - df[f"{channels[2]}_{band}_{stat}"]
             )
-            df[f"{channels[1]}_{channels[2]}_{band}_diff_{stat}"] = (
-                df[f"{channels[1]}_{band}_{stat}"]
-                - df[f"{channels[2]}_{band}_{stat}"]
+            new_cols[f"{channels[1]}_{channels[2]}_{band}_diff_{stat}"] = (
+                df[f"{channels[1]}_{band}_{stat}"] - df[f"{channels[2]}_{band}_{stat}"]
             )
 
-            df[f"{channels[0]}_{channels[1]}_{band}_ratio_{stat}"] = (
+            new_cols[f"{channels[0]}_{channels[1]}_{band}_ratio_{stat}"] = (
                 df[f"{channels[0]}_{band}_{stat}"]
-                / (df[f"{channels[1]}_{band}_{stat}"] + 1e-10)
+                / (df[f"{channels[1]}_{band}_{stat}"] + eps)
             )
-            df[f"{channels[0]}_{channels[2]}_{band}_ratio_{stat}"] = (
+            new_cols[f"{channels[0]}_{channels[2]}_{band}_ratio_{stat}"] = (
                 df[f"{channels[0]}_{band}_{stat}"]
-                / (df[f"{channels[2]}_{band}_{stat}"] + 1e-10)
+                / (df[f"{channels[2]}_{band}_{stat}"] + eps)
             )
-            df[f"{channels[1]}_{channels[2]}_{band}_ratio_{stat}"] = (
+            new_cols[f"{channels[1]}_{channels[2]}_{band}_ratio_{stat}"] = (
                 df[f"{channels[1]}_{band}_{stat}"]
-                / (df[f"{channels[2]}_{band}_{stat}"] + 1e-10)
+                / (df[f"{channels[2]}_{band}_{stat}"] + eps)
             )
 
-    # De-fragment the DataFrame to avoid PerformanceWarning.
-    return df.copy()
+    new_cols_df = pd.DataFrame(new_cols, index=df.index)
+    return pd.concat([df, new_cols_df], axis=1)

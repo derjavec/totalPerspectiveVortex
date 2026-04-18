@@ -33,4 +33,10 @@ def parse_args():
         help="Transformer choice (none, pca or csp).",
     )
 
+    parser.add_argument(
+        "--anova",
+        type=int,
+        default=None,
+        help="Apply ANOVA feature selection with k best features (e.g. --anova 30). Works only with transformer 'pca' or 'none' and is ignored for CSP.",    )
+
     return parser.parse_args()

@@ -1,5 +1,6 @@
 import numpy as np
 from mne_manager import get_events_and_labels
+from mne import Epochs
 
 
 def get_labels(task_name):
@@ -13,9 +14,8 @@ def get_labels(task_name):
     return keep_labels
 
 
-def prepare_global_data(raws, subjects, task_name, tmin=0, tmax=4):
+def prepare_global_data(raws, subjects, task_name, tmin=0.5, tmax=3):
     """Build a single epoch-based representation for all transformers."""
-    from mne import Epochs
 
     keep_labels = get_labels(task_name)
     X_list = []
