@@ -4,21 +4,25 @@ from pathlib import Path
 
 
 def setup_logging(
-    level: int = logging.INFO,
-    log_dir: str = "logs",
-    log_file: str = "tpv.log",
-) -> None:
-    """Configure console and file logging for the app."""
+    level=logging.INFO,
+    log_dir="logs",
+    log_file="tpv.log",
+):
+    """Configure console and rotating file logging for the application.
+
+    The root logger is reset, and both console and file handlers are added.
+    External libraries such as matplotlib and MNE are silenced to warnings.
+    """
     Path(log_dir).mkdir(exist_ok=True)
 
     formatter = logging.Formatter(
         "%(asctime)s | %(levelname)-7s | %(name)s | %(message)s"
     )
 
-    root = logging.getLogger()
-    root.setLevel(level)
+    root_logger = logging.getLogger()
+    root_logger.setLevel(level)
 
-    root.handlers.clear()
+    root_logger.handlers.clear()
 
     console_handler = logging.StreamHandler()
     console_handler.setLevel(level)
@@ -33,8 +37,8 @@ def setup_logging(
     file_handler.setLevel(logging.DEBUG)
     file_handler.setFormatter(formatter)
 
-    root.addHandler(console_handler)
-    root.addHandler(file_handler)
+    root_logger.addHandler(console_handler)
+    root_logger.addHandler(file_handler)
 
     logging.getLogger("matplotlib").setLevel(logging.WARNING)
     logging.getLogger("mne").setLevel(logging.WARNING)

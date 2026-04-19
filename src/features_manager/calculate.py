@@ -12,9 +12,17 @@ EEG_CONFIG = {
     },
 }
 
+TIME_STATS = ["mean", "std", "max", "min", "range"]
+EPSILON = 1e-10
+
 
 def compute_features_from_epoch(data, channels, sfreq):
-    """Compute band-power and band-filtered time-domain features for one epoch."""
+    """Compute spectral and time-domain features for a single epoch.
+
+    The function extracts log band power, relative band power, and basic
+    time-domain statistics from band-pass filtered signals for each channel
+    and frequency band.
+    """
     psd, freqs = psd_array_welch(
         data,
         sfreq=sfreq,
@@ -28,8 +36,8 @@ def compute_features_from_epoch(data, channels, sfreq):
     total_power = psd.sum(axis=1)
 
     for band_name, (fmin, fmax) in EEG_CONFIG["bands"].items():
-        idx = (freqs >= fmin) & (freqs <= fmax)
-        band_power = psd[:, idx].sum(axis=1)
+        band_mask = (freqs >= fmin) & (freqs <= fmax)
+        band_power = psd[:, band_mask].sum(axis=1)
 
         band_filtered = filter_data(
             data,
@@ -43,9 +51,9 @@ def compute_features_from_epoch(data, channels, sfreq):
             ch_name = channels[ch_idx]
             band_signal = band_filtered[ch_idx, :]
 
-            features[f"{ch_name}_{band_name}_power"] = np.log(power + 1e-10)
+            features[f"{ch_name}_{band_name}_power"] = np.log(power + EPSILON)
             features[f"{ch_name}_{band_name}_rel"] = (
-                power / (total_power[ch_idx] + 1e-10)
+                power / (total_power[ch_idx] + EPSILON)
             )
             features[f"{ch_name}_{band_name}_mean"] = band_signal.mean()
             features[f"{ch_name}_{band_name}_std"] = band_signal.std()
@@ -59,72 +67,42 @@ def compute_features_from_epoch(data, channels, sfreq):
 
 
 def calculate_differences_and_ratios(df):
-    """Add pairwise differences and ratios between channels and bands."""
+    """Add pairwise channel differences and ratios to the feature table.
+
+    The function creates derived features for power, relative power, and
+    time-domain statistics across predefined channel pairs for each band.
+    """
     channels = EEG_CONFIG["channels"]
     bands = list(EEG_CONFIG["bands"].keys())
-    stats = ["mean", "std", "max", "min", "range"]
-    eps = 1e-10
+
+    channel_pairs = [
+        (channels[0], channels[1]),
+        (channels[0], channels[2]),
+        (channels[1], channels[2]),
+    ]
 
     new_cols = {}
 
     for band in bands:
-        # Power differences
-        new_cols[f"{channels[0]}_{channels[1]}_{band}_diff_power"] = (
-            df[f"{channels[0]}_{band}_power"] - df[f"{channels[1]}_{band}_power"]
-        )
-        new_cols[f"{channels[0]}_{channels[2]}_{band}_diff_power"] = (
-            df[f"{channels[0]}_{band}_power"] - df[f"{channels[2]}_{band}_power"]
-        )
-        new_cols[f"{channels[1]}_{channels[2]}_{band}_diff_power"] = (
-            df[f"{channels[1]}_{band}_power"] - df[f"{channels[2]}_{band}_power"]
-        )
-
-        # Relative-power differences
-        new_cols[f"{channels[0]}_{channels[1]}_{band}_diff_rel"] = (
-            df[f"{channels[0]}_{band}_rel"] - df[f"{channels[1]}_{band}_rel"]
-        )
-        new_cols[f"{channels[0]}_{channels[2]}_{band}_diff_rel"] = (
-            df[f"{channels[0]}_{band}_rel"] - df[f"{channels[2]}_{band}_rel"]
-        )
-        new_cols[f"{channels[1]}_{channels[2]}_{band}_diff_rel"] = (
-            df[f"{channels[1]}_{band}_rel"] - df[f"{channels[2]}_{band}_rel"]
-        )
-
-        # Relative-power ratios
-        new_cols[f"{channels[0]}_{channels[1]}_{band}_ratio_rel"] = (
-            df[f"{channels[0]}_{band}_rel"] / (df[f"{channels[1]}_{band}_rel"] + eps)
-        )
-        new_cols[f"{channels[0]}_{channels[2]}_{band}_ratio_rel"] = (
-            df[f"{channels[0]}_{band}_rel"] / (df[f"{channels[2]}_{band}_rel"] + eps)
-        )
-        new_cols[f"{channels[1]}_{channels[2]}_{band}_ratio_rel"] = (
-            df[f"{channels[1]}_{band}_rel"] / (df[f"{channels[2]}_{band}_rel"] + eps)
-        )
-
-
-        for stat in stats:
-            new_cols[f"{channels[0]}_{channels[1]}_{band}_diff_{stat}"] = (
-                df[f"{channels[0]}_{band}_{stat}"] - df[f"{channels[1]}_{band}_{stat}"]
+        for ch_a, ch_b in channel_pairs:
+            new_cols[f"{ch_a}_{ch_b}_{band}_diff_power"] = (
+                df[f"{ch_a}_{band}_power"] - df[f"{ch_b}_{band}_power"]
             )
-            new_cols[f"{channels[0]}_{channels[2]}_{band}_diff_{stat}"] = (
-                df[f"{channels[0]}_{band}_{stat}"] - df[f"{channels[2]}_{band}_{stat}"]
+            new_cols[f"{ch_a}_{ch_b}_{band}_diff_rel"] = (
+                df[f"{ch_a}_{band}_rel"] - df[f"{ch_b}_{band}_rel"]
             )
-            new_cols[f"{channels[1]}_{channels[2]}_{band}_diff_{stat}"] = (
-                df[f"{channels[1]}_{band}_{stat}"] - df[f"{channels[2]}_{band}_{stat}"]
+            new_cols[f"{ch_a}_{ch_b}_{band}_ratio_rel"] = (
+                df[f"{ch_a}_{band}_rel"] / (df[f"{ch_b}_{band}_rel"] + EPSILON)
             )
 
-            new_cols[f"{channels[0]}_{channels[1]}_{band}_ratio_{stat}"] = (
-                df[f"{channels[0]}_{band}_{stat}"]
-                / (df[f"{channels[1]}_{band}_{stat}"] + eps)
-            )
-            new_cols[f"{channels[0]}_{channels[2]}_{band}_ratio_{stat}"] = (
-                df[f"{channels[0]}_{band}_{stat}"]
-                / (df[f"{channels[2]}_{band}_{stat}"] + eps)
-            )
-            new_cols[f"{channels[1]}_{channels[2]}_{band}_ratio_{stat}"] = (
-                df[f"{channels[1]}_{band}_{stat}"]
-                / (df[f"{channels[2]}_{band}_{stat}"] + eps)
-            )
+            for stat in TIME_STATS:
+                new_cols[f"{ch_a}_{ch_b}_{band}_diff_{stat}"] = (
+                    df[f"{ch_a}_{band}_{stat}"] - df[f"{ch_b}_{band}_{stat}"]
+                )
+                new_cols[f"{ch_a}_{ch_b}_{band}_ratio_{stat}"] = (
+                    df[f"{ch_a}_{band}_{stat}"]
+                    / (df[f"{ch_b}_{band}_{stat}"] + EPSILON)
+                )
 
     new_cols_df = pd.DataFrame(new_cols, index=df.index)
     return pd.concat([df, new_cols_df], axis=1)

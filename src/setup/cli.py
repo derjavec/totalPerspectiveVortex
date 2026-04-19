@@ -1,42 +1,53 @@
+"""Command-line argument parsing for the application."""
+
 import argparse
 
 
 def parse_args():
-    """Parse command-line arguments for the CLI."""
-    parser = argparse.ArgumentParser(description="Total Perspective Vortex")
+    """Parse CLI arguments and return the configuration namespace."""
+    parser = argparse.ArgumentParser(
+        description="Total Perspective Vortex"
+    )
 
     parser.add_argument(
         "--level",
         type=str,
         default="INFO",
         choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
-        help="Set the logging level.",
+        help="Logging level.",
     )
+
     parser.add_argument(
         "--subject",
         type=int,
         default=None,
-        help="ID of the subject to analyze (default: all subjects).",
+        help="Subject ID to analyze. If not set, all subjects are used.",
     )
+
     parser.add_argument(
         "--model",
         type=str,
         default="logistic",
         choices=["logistic", "randomforest"],
-        help="Choose the classifier.",
+        help="Classifier to use.",
     )
+
     parser.add_argument(
         "--transformer",
         type=str,
         default="none",
-        choices=["none", "pca", "csp"],
-        help="Transformer choice (none, pca or csp).",
+        choices=["none", "pca", "my_pca", "csp"],
+        help="Feature transformer to apply.",
     )
 
     parser.add_argument(
         "--anova",
         type=int,
         default=None,
-        help="Apply ANOVA feature selection with k best features (e.g. --anova 30). Works only with transformer 'pca' or 'none' and is ignored for CSP.",    )
+        help=(
+            "Apply ANOVA feature selection with k best features "
+            "(e.g. --anova 30). Ignored when using CSP."
+        ),
+    )
 
     return parser.parse_args()
