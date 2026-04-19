@@ -16,7 +16,7 @@ from .pipeline_csp import train_and_validate_csp
 from .pipeline_pca import train_and_validate
 from .preparation import prepare_global_data
 from .selection import select_task
-from .visualize import visualize_raws
+from .visualize import visualize_filter_effect, visualize_raws
 
 logger = logging.getLogger(__name__)
 
@@ -63,6 +63,7 @@ def load_and_filter_raws(subjects, runs, plots_dir, task_name):
     visualize_raws(raws, plots_dir, task_name, stage="Before")
     filtered_raws = apply_filter(raws)
     visualize_raws(filtered_raws, plots_dir, task_name, stage="After")
+    visualize_filter_effect(raws, filtered_raws, plots_dir, task_name)
 
     return filtered_raws
 
